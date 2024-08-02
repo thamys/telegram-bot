@@ -8,9 +8,16 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
 bot.on("message", (msg) => {
-  console.log(msg);
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, processMessage(msg, chatId));
+  processMessage(msg, chatId).then((response) => {
+    bot.sendMessage(chatId, response, {
+      parse_mode: "Markdown",
+      disable_web_page_preview: true,
+    });
+  }).catch((error) => {
+    console.log(error);
+    bot.sendMessage(chatId, "An error occurred. Please try again later.");
+  });
 });
 
 const server = createServer();

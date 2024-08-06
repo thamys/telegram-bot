@@ -10,8 +10,8 @@ export default function startTelegramListener(bot) {
 
     if (!response) return;
 
-    const escapedString = response.replace(/_/g, "\\_");
-    
+    const escapedString = response.replace(/([*_`[\]()/~>#+-=|{}.!])/g, "\$1");
+
     bot.sendMessage(chatId, escapedString, { parse_mode: "Markdown" });
   });
 }

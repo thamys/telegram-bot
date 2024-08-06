@@ -1,7 +1,7 @@
 // server.mjs
 import { createServer } from "node:http";
 import TelegramBot from "node-telegram-bot-api";
-import startTelegramListener from "./index.mjs";
+import startTelegramListener from "./src/telegram.mjs";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });

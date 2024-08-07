@@ -24,3 +24,45 @@ function findCommandObject(index) {
 
   return commandObject;
 }
+
+
+function escapeMessageRecursive(message) {
+  if (typeof message === "string") {
+    return message.replace(/([*_`[\]()/~>#+-=|{}.!])/g, "$1");
+  }
+
+  if (Array.isArray(message)) {
+    return message.map((m) => escapeMessageRecursive(m));
+  }
+
+  if (typeof message === "object") {
+    return Object.fromEntries(
+      Object.entries(message).map(([key, value]) => [
+        key,
+        escapeMessageRecursive(value),
+      ])
+    );
+  }
+
+  return message;
+}
+
+function transformMessageIntoStringRecursive(message) {
+  if (typeof message === "string") {
+    return message;
+  }
+
+  if (Array.isArray(message)) {
+    return message.join(", ");
+  }
+
+  if (typeof message === "object") {
+    return JSON.stringify(message, null, 2);
+  }
+
+  return message;
+}
+
+export function escapeMessageRecursiveAndTransformIntoString(message) {
+  return transformMessageIntoStringRecursive(escapeMessageRecursive(message));
+}

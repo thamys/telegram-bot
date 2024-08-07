@@ -1,71 +1,45 @@
 import { commands } from "./constants.mjs";
-import { fetchCommandData } from "./d-and-d-api.mjs";
-import { getCommandObject } from "./helpers.mjs";
+import { escapeMessageRecursiveAndTransformIntoString } from "./helpers.mjs";
+import { processMessage } from "./index.mjs";
 
 export default function startTelegramListener(bot) {
   bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
 
+    if (msg.text == "/help") {
+      return showHelper(chatId, bot);
+    }
+
     const response = await processMessage(msg, chatId);
 
     if (!response) return;
 
-    const escapedString = response.replace(/([*_`[\]()/~>#+-=|{}.!])/g, "\$1");
+    if (typeof response === "string") {
+      return bot.sendMessage(chatId, response);
+    }
 
-    bot.sendMessage(chatId, escapedString, { parse_mode: "Markdown" });
+    if (Array.isArray(response.result)) {
+      showList(response, chatId, bot);
+      return;
+    }
+
+    showDetails(response, chatId, bot);
   });
 }
 
-async function processMessage(message, chatId) {
-  const type = message?.entities?.[0]?.type || "";
-
-  if (type != "bot_command") return;
-  const text = message?.text || "";
-
-  let response = "";
-
-  if (text == "/start") {
-    response += "Welcome to D&D Bot!\n";
-    response +=
-      "Type /help to see the available commands or type / followed by the command you want to use.";
-    return response;
-  }
-
-  if (text == "/help") {
-    return showHelper();
-  }
-
-  response = await processCommand(text, chatId);
-  response += "\n\n Type /help to see the available commands.";
-
-  return response;
+function showHelper(chatId, bot) {
+  showList(
+    {
+      name: "Available commands",
+      result: commands,
+    },
+    chatId,
+    bot
+  );
 }
 
-async function processCommand(command, chatId) {
-
-  const commandObject = getCommandObject(command, chatId);
-
-  if (!commandObject) {
-    return "Invalid command. Type /help to see the available commands.";
-  }
-
-  if (commandObject.children)
-    return showList(commandObject.children, commandObject.name);
-
-  const result = await fetchCommandData(commandObject.url);
-  return showDetails(result, commandObject.name);
-}
-
-function showHelper() {
-  let response = "Available commands:\n";
-
-  response += showList(commands, "Available commands");
-  response += "\n\nType / followed by the command you want to use.";
-
-  return response;
-}
-
-function showList(results, name) {
+function showList(response, chatId, bot) {
+  const { name, result: results } = response;
   let responseTxt = `List of ${name}:\n`;
 
   results.forEach((result) => {
@@ -74,16 +48,26 @@ function showList(results, name) {
     }) - ${result.name}`;
   });
 
-  return responseTxt;
+  bot.sendMessage(chatId, responseTxt, { parse_mode: "Markdown" });
 }
 
-function showDetails(result) {
-  let responseTxt = `Details for ${result.name}:\n`;
+function showDetails(response, chatId, bot) {
+  const {
+    result: { name, index, url, ...results },
+  } = response;
 
-  Object.entries(result).forEach(([key, value]) => {
-    if (key === "name" || key === "url" || key === "index") return;
-    responseTxt += `\n**${key}**: ${value || value.join(", ")}`;
+  let message = `# Details for ${name}:\n`;
+
+  Object.entries(results).forEach(([key, value]) => {
+    const messageKey = key
+      .replaceAll("_", " ").toUpperCase();
+
+    const messageValue = escapeMessageRecursiveAndTransformIntoString(value);
+
+    message += `\n\n**${messageKey}**: ${messageValue}`;
   });
 
-  return responseTxt;
+   bot.sendMessage(chatId, message, {
+     parse_mode: "Markdown",
+   });
 }
